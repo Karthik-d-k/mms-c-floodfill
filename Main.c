@@ -8,6 +8,7 @@
 
 extern CELL CURRENT_CELL;
 extern ABSOLUTE_DIRECTION CURRENT_ABSOLUTE_DIRECTION;
+extern uint8_t COST[MAZE_SIZE][MAZE_SIZE];
 
 void init() {
     init_maze();
@@ -19,25 +20,29 @@ void log_text(const char* text) {
 }
 
 int main(int argc, char* argv[]) {
+    char log[100];
     init();
     log_text("Running...");
     API_setColor(0, 0, 'G');
     API_setText(0, 0, "START");
     API_setColor(7, 7, 'R');
     API_setText(7, 7, "END");
+    log_text("CURRENT_CELL  COST  CURRENT_ABSOLUTE_DIRECTION  new_direction  direction_change");
 
     CELL target = END;
-    floodfill(target);
+    // floodfill(target);
     while ((CURRENT_CELL.r != target.r) || (CURRENT_CELL.c != target.c)) {
         WallState front_wall = API_wallFront() ? WALL_PRESENT : WALL_ABSENT;
         WallState right_wall = API_wallRight() ? WALL_PRESENT : WALL_ABSENT;
         WallState left_wall = API_wallLeft() ? WALL_PRESENT : WALL_ABSENT;
 
-        CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
+        // CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
         update_walls(front_wall, right_wall, left_wall);
         floodfill(target);
         ABSOLUTE_DIRECTION new_direction = smallest_neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
         ABSOLUTE_DIRECTION direction_change = (new_direction - CURRENT_ABSOLUTE_DIRECTION) & 0x3;
+        // sprintf(log, "%4d, %2d  %6d  %26d  %13d  %16d", CURRENT_CELL.r, CURRENT_CELL.c, COST[CURRENT_CELL.r][CURRENT_CELL.c], CURRENT_ABSOLUTE_DIRECTION, new_direction, direction_change);
+        // log_text(log);
 
         if ((CURRENT_CELL.r != target.r) || (CURRENT_CELL.c != target.c)) {
             switch (direction_change) {
@@ -51,16 +56,16 @@ int main(int argc, char* argv[]) {
                 API_moveForward();
                 CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
                 break;
-            case LEFT:
-                API_turnLeft();
-                CURRENT_ABSOLUTE_DIRECTION = left_from(CURRENT_ABSOLUTE_DIRECTION);
-                API_moveForward();
-                CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
-                break;
             case BACK:
                 API_turnRight();
                 API_turnRight();
                 CURRENT_ABSOLUTE_DIRECTION = behind_from(CURRENT_ABSOLUTE_DIRECTION);
+                API_moveForward();
+                CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
+                break;
+            case LEFT:
+                API_turnLeft();
+                CURRENT_ABSOLUTE_DIRECTION = left_from(CURRENT_ABSOLUTE_DIRECTION);
                 API_moveForward();
                 CURRENT_CELL = neighbour_cell(CURRENT_CELL, CURRENT_ABSOLUTE_DIRECTION);
                 break;

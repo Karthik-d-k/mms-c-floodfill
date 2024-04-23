@@ -5,25 +5,30 @@
 #include "maze.h"
 
 WallInfo WALLS[MAZE_SIZE][MAZE_SIZE];
-MazeMask MAZE_MASK;
+MazeMask MAZE_MASK = MASK_TREAT_UNSEEN_AS_ABSENT;
 CELL CURRENT_CELL = {0, 0};
 ABSOLUTE_DIRECTION CURRENT_ABSOLUTE_DIRECTION = NORTH;
 extern uint8_t COST[MAZE_SIZE][MAZE_SIZE];
 
-inline ABSOLUTE_DIRECTION right_from(const ABSOLUTE_DIRECTION heading) {
-    return (ABSOLUTE_DIRECTION)((heading + 1) % ABS_DIR_COUNT);
+inline ABSOLUTE_DIRECTION right_from(const ABSOLUTE_DIRECTION direction) {
+    return (ABSOLUTE_DIRECTION)((direction + 1) % ABS_DIR_COUNT);
 }
 
-inline ABSOLUTE_DIRECTION left_from(const ABSOLUTE_DIRECTION heading) {
-    return (ABSOLUTE_DIRECTION)((heading + ABS_DIR_COUNT - 1) % ABS_DIR_COUNT);
+inline ABSOLUTE_DIRECTION left_from(const ABSOLUTE_DIRECTION direction) {
+    return (ABSOLUTE_DIRECTION)((direction + ABS_DIR_COUNT - 1) % ABS_DIR_COUNT);
 }
 
-inline ABSOLUTE_DIRECTION ahead_from(const ABSOLUTE_DIRECTION heading) {
-    return heading;
+inline ABSOLUTE_DIRECTION ahead_from(const ABSOLUTE_DIRECTION direction) {
+    return direction;
 }
 
-inline ABSOLUTE_DIRECTION behind_from(const ABSOLUTE_DIRECTION heading) {
-    return (ABSOLUTE_DIRECTION)((heading + 2) % ABS_DIR_COUNT);
+inline ABSOLUTE_DIRECTION behind_from(const ABSOLUTE_DIRECTION direction) {
+    return (ABSOLUTE_DIRECTION)((direction + 2) % ABS_DIR_COUNT);
+}
+
+void log_maze(const char* text) {
+    fprintf(stderr, "%s\n", text);
+    fflush(stderr);
 }
 
 void init_walls() {
@@ -77,7 +82,7 @@ bool is_cell_accessible(CELL cell, ABSOLUTE_DIRECTION direction) {
 CELL neighbour_cell(CELL cell, ABSOLUTE_DIRECTION direction) {
     switch (direction) {
     case NORTH: {
-        uint8_t new_y = cell.c + 1;
+        int16_t new_y = cell.c + 1;
         if (new_y >= MAZE_SIZE) {
             return cell;
         }
@@ -85,7 +90,7 @@ CELL neighbour_cell(CELL cell, ABSOLUTE_DIRECTION direction) {
         return neighbour_cell;
     }
     case EAST: {
-        uint8_t new_x = cell.r + 1;
+        int16_t new_x = cell.r + 1;
         if (new_x >= MAZE_SIZE) {
             return cell;
         }
@@ -93,7 +98,7 @@ CELL neighbour_cell(CELL cell, ABSOLUTE_DIRECTION direction) {
         return neighbour_cell;
     }
     case SOUTH: {
-        uint8_t new_y = cell.c - 1;
+        int16_t new_y = cell.c - 1;
         if (new_y < 0) {
             return cell;
         }
@@ -101,7 +106,7 @@ CELL neighbour_cell(CELL cell, ABSOLUTE_DIRECTION direction) {
         return neighbour_cell;
     }
     case WEST: {
-        uint8_t new_x = cell.r - 1;
+        int16_t new_x = cell.r - 1;
         if (new_x < 0) {
             return cell;
         }
@@ -115,46 +120,75 @@ CELL neighbour_cell(CELL cell, ABSOLUTE_DIRECTION direction) {
 }
 
 uint8_t cost_neighbour_cell(const CELL cell, const ABSOLUTE_DIRECTION direction) {
+    char log[100];
+    WallInfo walls = WALLS[cell.r][cell.c];
     if (!is_cell_accessible(cell, direction)) {
+        sprintf(log, "[fucked]: %2d, %2d  %6d [%d %d %d %d]", cell.r, cell.c, direction, walls.north, walls.east, walls.south, walls.west);
+        log_maze(log);
         return MAX_COST;
     }
+    sprintf(log, "[fucked]: %2d, %2d  %6d [%d %d %d %d]", cell.r, cell.c, direction, walls.north, walls.east, walls.south, walls.west);
+    log_maze(log);
     CELL next_cell = neighbour_cell(cell, direction);
 
     return COST[next_cell.r][next_cell.c];
 }
 
 ABSOLUTE_DIRECTION smallest_neighbour_cell(const CELL cell, const ABSOLUTE_DIRECTION start_direction) {
+    char log[100];
     ABSOLUTE_DIRECTION next_direction = start_direction;
     ABSOLUTE_DIRECTION best_direction = BLOCKED;
     uint8_t best_cost = COST[cell.r][cell.c];
-    uint8_t cost;
+    uint8_t cost = 0;
 
     cost = cost_neighbour_cell(cell, next_direction);
     if (cost < best_cost) {
         best_cost = cost;
         best_direction = next_direction;
     };
+
+    // sprintf(log, "[start_from ]: %2d, %2d  %6d  %6d", cell.r, cell.c, best_cost, best_direction);
+    // log_maze(log);
+
     next_direction = right_from(start_direction);
     cost = cost_neighbour_cell(cell, next_direction);
+    // sprintf(log, "{   %6d, %6d   }", next_direction, cost);
+    // log_maze(log);
+
     if (cost < best_cost) {
         best_cost = cost;
         best_direction = next_direction;
     };
-    next_direction = left_from(start_direction);
-    cost = cost_neighbour_cell(cell, next_direction);
-    if (cost < best_cost) {
-        best_cost = cost;
-        best_direction = next_direction;
-    };
+
+    // sprintf(log, "[right_from ]: %2d, %2d  %6d  %6d", cell.r, cell.c, best_cost, best_direction);
+    // log_maze(log);
+
     next_direction = behind_from(start_direction);
     cost = cost_neighbour_cell(cell, next_direction);
     if (cost < best_cost) {
         best_cost = cost;
         best_direction = next_direction;
     };
+
+    // sprintf(log, "[behind_from]: %2d, %2d  %6d  %6d", cell.r, cell.c, best_cost, best_direction);
+    // log_maze(log);
+
+    next_direction = left_from(start_direction);
+    cost = cost_neighbour_cell(cell, next_direction);
+    if (cost < best_cost) {
+        best_cost = cost;
+        best_direction = next_direction;
+    };
+
+    // sprintf(log, "[left_from  ]: %2d, %2d  %6d  %6d", cell.r, cell.c, best_cost, best_direction);
+    // log_maze(log);
+
     if (best_cost == MAX_COST) {
         best_direction = BLOCKED;
     }
+
+    // sprintf(log, "[END        ]: %2d, %2d  %6d  %6d", cell.r, cell.c, best_cost, best_direction);
+    // log_maze(log);
 
     return best_direction;
 }
@@ -241,32 +275,18 @@ void update_walls(WallState front_wall, WallState right_wall, WallState left_wal
         return;
     }
 
-    switch (CURRENT_ABSOLUTE_DIRECTION) {
-    case NORTH:
-        if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].north & WALL_UNSEEN) != WALL_UNSEEN) {
-            return;
-        }
-        break;
-    case EAST:
-        if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].east & WALL_UNSEEN) != WALL_UNSEEN) {
-            return;
-        }
-        break;
-    case WEST:
-        if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].west & WALL_UNSEEN) != WALL_UNSEEN) {
-            return;
-        }
-        break;
-    case SOUTH:
-        if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].south & WALL_UNSEEN) != WALL_UNSEEN) {
-            return;
-        }
-        break;
-    default:
-        // ignore any other Directions (blocked)
-        break;
+    if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].north & WALL_UNSEEN) != WALL_UNSEEN) {
+        return;
     }
-
+    if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].east & WALL_UNSEEN) != WALL_UNSEEN) {
+        return;
+    }
+    if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].west & WALL_UNSEEN) != WALL_UNSEEN) {
+        return;
+    }
+    if ((WALLS[CURRENT_CELL.r][CURRENT_CELL.c].south & WALL_UNSEEN) != WALL_UNSEEN) {
+        return;
+    }
     // set walls only if it is not seen earlier
     set_walls(front_wall, right_wall, left_wall);
 }
