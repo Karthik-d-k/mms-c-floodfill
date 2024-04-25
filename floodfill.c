@@ -5,7 +5,6 @@
 #include "queue.h"
 
 uint8_t COST[MAZE_SIZE][MAZE_SIZE];
-extern WallInfo WALLS[MAZE_SIZE][MAZE_SIZE];
 
 void floodfill(const CELL target) {
     // 1. Set all cells cost to "blank state" (255)

@@ -12,7 +12,7 @@
 #define START \
     { 0, 0 }
 #define END \
-    { 7, 7 }
+    { 15, 15 }
 
 typedef struct {
     uint8_t r;
@@ -35,10 +35,10 @@ typedef enum { AHEAD,
                REL_DIR_COUNT } RELATIVE_DIRECTION;
 
 typedef enum {
-    WALL_ABSENT = 0b00,  // a wall that has been seen and confirmed absent
-    WALL_PRESENT = 0b01, // a wall that has been seen and confirmed present
-    WALL_UNSEEN = 0b10,  // a wall that has not yet been seen
-    WALL_VIRTUAL = 0b11, // a wall that does not exist in the physical maze, used for special cases
+    WALL_ABSENT = 0x00,  // a wall that has been seen and confirmed absent
+    WALL_PRESENT = 0x01, // a wall that has been seen and confirmed present
+    WALL_UNSEEN = 0x02,  // a wall that has not yet been seen
+    WALL_VIRTUAL = 0x03, // a wall that does not exist in the physical maze, used for special cases
 } WallState;
 
 typedef struct {
@@ -73,7 +73,7 @@ ABSOLUTE_DIRECTION smallest_neighbour_cell(const CELL cell, const ABSOLUTE_DIREC
 
 void set_mask(const MazeMask mask);
 
-void set_walls(WallState front_wall, WallState right_wall, WallState left_wall);
+WallState get_wall_state(WallState current_state, WallState new_state);
 
 void update_walls(WallState front_wall, WallState right_wall, WallState left_wall);
 

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stdint.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "random": "c"
     }
 }
